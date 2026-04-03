@@ -4,7 +4,10 @@ import { fileURLToPath } from "url";
 import { chat } from "../tools/ai.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptPlanningAgent.txt"), "utf-8").trim();
+const systemPrompt = fs.readFileSync(
+  path.join(__dirname, "..", "systemPrompts", "systemPromptPlanningAgent.txt"),
+  "utf-8",
+).trim();
 
 /**
  * Planning agent: creates an editing plan from the user prompt and transcripts.

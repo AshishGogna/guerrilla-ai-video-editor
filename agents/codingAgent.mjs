@@ -5,7 +5,10 @@ import { execSync } from "child_process";
 import { chat } from "../tools/ai.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptCodingAgent.txt"), "utf-8").trim();
+const systemPrompt = fs.readFileSync(
+  path.join(__dirname, "..", "systemPrompts", "systemPromptCodingAgent.txt"),
+  "utf-8",
+).trim();
 
 /**
  * Coding agent: generates a self-contained Remotion file from an editing plan.

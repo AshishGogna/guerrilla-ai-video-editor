@@ -6,7 +6,10 @@ import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptVisualTranscript.txt"), "utf-8").trim();
+const systemPrompt = fs.readFileSync(
+  path.join(__dirname, "..", "systemPrompts", "systemPromptVisualTranscript.txt"),
+  "utf-8",
+).trim();
 
 const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY);

@@ -6,7 +6,10 @@ import { transcribeAudio } from "./tool_audio_transcript.mjs";
 import { transcribeVideo } from "./tool_visual_transcript.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptChat.txt"), "utf-8").trim();
+const systemPrompt = fs.readFileSync(
+  path.join(__dirname, "..", "systemPrompts", "systemPromptChat.txt"),
+  "utf-8",
+).trim();
 
 const openai = new OpenAI();
 
