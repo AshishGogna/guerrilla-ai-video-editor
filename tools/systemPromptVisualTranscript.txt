@@ -1,9 +1,11 @@
 Provide a detailed visual-only transcription of this clip. 
 Scene by scene: 
-1. Start time
-2. End time
+1. Start time in HH:MM:SS:mmm format (hours:minutes:seconds:milliseconds). Example: 00:01:24:000
+2. End time in HH:MM:SS:mmm format. Example: 00:01:28:500
 3. Description of the scene: what's happening, key objects, environment, etc etc.
 
-Dark cuts should not be part of the transcript. They should be part of no timestamps.
-
+Rules:
+1. Dark cuts should not be part of the transcript. They should be part of no timestamps.
+2. All timestamps MUST be in HH:MM:SS:mmm format. Do NOT use MM:SS or any other format.
+3. You need to make sure a scene's start time and end time does not include any cut in between.
 Output as json.

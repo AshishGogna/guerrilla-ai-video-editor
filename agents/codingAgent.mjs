@@ -14,10 +14,11 @@ const MAIN_TSX = path.join(__dirname, "..", "src", "Main.tsx");
  * Also executes any shell commands the AI returns (e.g. npm install).
  *
  * @param {string} editingPlan - The editing plan from the planning agent
+ * @param {string} sessionId - Session identifier
  */
-export async function codingAgent(editingPlan) {
+export async function codingAgent(editingPlan, sessionId) {
   const prompt = `${systemPrompt}\n\nEditing plan (execute exactly as specified):\n${editingPlan}`;
-  const response = await chat(prompt, "gpt-5.4");
+  const response = await chat(prompt, "gpt-5.4", sessionId);
 
   let parsed;
   try {
@@ -49,9 +50,11 @@ export async function codingAgent(editingPlan) {
   console.log(`[codingAgent] Main.tsx updated`);
 
   if (config) {
-    const configPath = path.join(__dirname, "..", "public", "composition.json");
-    fs.mkdirSync(path.dirname(configPath), { recursive: true });
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const configJson = JSON.stringify(config, null, 2);
+    const sessionConfigPath = path.join("public", sessionId, "composition.json");
+    fs.writeFileSync(sessionConfigPath, configJson);
+    const rootConfigPath = path.join(__dirname, "..", "public", "composition.json");
+    fs.writeFileSync(rootConfigPath, configJson);
     console.log(`[codingAgent] composition.json updated`);
   }
 }

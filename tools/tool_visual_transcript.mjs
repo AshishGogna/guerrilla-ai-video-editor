@@ -14,21 +14,21 @@ const model = genai.getGenerativeModel({ model: "gemini-3.1-flash-lite-preview",
 
 /**
  * Transcribes visual content from a video file using Gemini Vision.
- * Saves result to public/<filename>.video.json
+ * Saves result to public/<sessionId>/<filename>.video.json
  *
  * @param {string} inputPath - Path to a video file
  * @param {string} prompt - Instructions for what to describe in the video
+ * @param {string} [sessionId] - Session identifier for output directory
  * @returns {Promise<string>} Path to the saved transcript JSON
  */
-export async function transcribeVideo(inputPath, prompt) {
-  // prompt = systemPrompt;
-
+export async function transcribeVideo(inputPath, prompt, sessionId) {
   if (!fs.existsSync(inputPath)) {
     throw new Error(`File not found: ${inputPath}`);
   }
 
   const basename = path.basename(inputPath, path.extname(inputPath));
-  const outputPath = path.join("public", `${basename}.video.json`);
+  const outDir = sessionId ? path.join("public", sessionId) : "public";
+  const outputPath = path.join(outDir, `${basename}.video.json`);
 
   if (fs.existsSync(outputPath)) {
     console.log(`Visual transcript already exists: ${outputPath}`);
@@ -99,7 +99,7 @@ export async function transcribeVideo(inputPath, prompt) {
     frames,
   };
 
-  fs.mkdirSync("public", { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
 
   console.log(`Visual transcript saved: ${outputPath}`);

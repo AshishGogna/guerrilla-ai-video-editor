@@ -11,7 +11,7 @@ const ROOT = path.join(__dirname, "..");
  * @param {string} sessionId - Used to name the output file
  */
 export async function renderingAgent(sessionId) {
-  const outputPath = path.join("public", `${sessionId}.mp4`);
+  const outputPath = path.join("public", sessionId, `${sessionId}.mp4`);
 
   console.log(`[renderingAgent] Rendering to ${outputPath}...`);
 

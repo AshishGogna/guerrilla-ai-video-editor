@@ -23,12 +23,22 @@ Rules:
 - In the code, add comments on top of each cut explaining why this cut is placed there.
 
 Timestamps:
+- The editing plan uses the format HH:MM:SS:mmm (hours:minutes:seconds:milliseconds).
 - The composition fps is ALWAYS 24. Remotion conforms source clips automatically.
-- Define these helpers at the top of Main.tsx:
+- Define this helper at the top of Main.tsx:
   const FPS = 24;
-  const ts = (mmss: string) => { const [m, s] = mmss.split(':').map(Number); return Math.round((m * 60 + s) * FPS); };
-- Use ts() to convert frames to seconds
+  const ts = (t: string) => { const [h, m, s, ms] = t.split(':').map(Number); return Math.round((h * 3600 + m * 60 + s + ms / 1000) * FPS); };
+- Use ts() for ALL timestamp-to-frame conversions:
+  <Sequence from={ts('00:00:05:000')} durationInFrames={ts('00:00:03:000')}>
+  <OffthreadVideo startFrom={ts('01:24:00:000')} />
 
 Structuring:
-1. Tracks: Use stacked <AbsoluteFill> layers as tracks. Ordering of tracks is such that first track is on top, the next is below it and so on.
-2. Clips: Place clips on the timeline using <Sequence from={t(seconds)} durationInFrames={t(duration)}>. All values in MM:SS, converted using ts().
+1. Tracks: Use stacked <AbsoluteFill> layers as tracks. Later siblings render ON TOP. So overlay tracks (like motion graphics) must be the LAST <AbsoluteFill> in the JSX.
+2. Clips: Place clips on the timeline using <Sequence from={ts('HH:MM:SS:mmm')} durationInFrames={ts('HH:MM:SS:mmm')}>.
+3. EVERY <OffthreadVideo> MUST have a startFrom prop set to the clip's "Source start" from the editing plan. This tells Remotion where in the source file to begin playback. Without it, every clip plays from the start of the file. Example: <OffthreadVideo src={staticFile('trailer.mp4')} startFrom={ts('01:24:00:000')} muted />
+4. For speaker clips where the audio plays continuously, startFrom must equal the timeline position so video stays in sync with audio.
+5. Mute videos when only visuals are needed: add muted to <OffthreadVideo>.
+6. NEVER use endAt on <OffthreadVideo>. The Sequence's durationInFrames controls how long a clip plays.
+7. NEVER use useCurrentFrame() for timing visibility of elements. Use <Sequence from={ts(...)} durationInFrames={...}> to control when things appear. For example, to show a word at a specific time, wrap it in its own Sequence with an absolute from value. useCurrentFrame() returns frames relative to the parent Sequence, which causes timing bugs.
+8. Every frame of the timeline must have a visible video clip. No gaps between clips.
+9. Use staticFile() with ONLY the filename, never the full absolute path.

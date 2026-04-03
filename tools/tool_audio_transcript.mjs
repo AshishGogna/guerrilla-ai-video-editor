@@ -4,20 +4,30 @@ import path from "path";
 
 const openai = new OpenAI();
 
+function secsToTimestamp(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  const ms = Math.round((secs % 1) * 1000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}:${String(ms).padStart(3, "0")}`;
+}
+
 /**
  * Transcribes audio from an audio or video file using OpenAI Whisper.
- * Saves result to public/<filename>.audio.json
+ * Saves result to public/<sessionId>/<filename>.audio.json
  *
  * @param {string} inputPath - Path to an audio or video file
+ * @param {string} [sessionId] - Session identifier for output directory
  * @returns {Promise<string>} Path to the saved transcript JSON
  */
-export async function transcribeAudio(inputPath) {
+export async function transcribeAudio(inputPath, sessionId) {
   if (!fs.existsSync(inputPath)) {
     throw new Error(`File not found: ${inputPath}`);
   }
 
   const basename = path.basename(inputPath, path.extname(inputPath));
-  const outputPath = path.join("public", `${basename}.audio.json`);
+  const outDir = sessionId ? path.join("public", sessionId) : "public";
+  const outputPath = path.join(outDir, `${basename}.audio.json`);
 
   if (fs.existsSync(outputPath)) {
     console.log(`Audio transcript already exists: ${outputPath}`);
@@ -35,13 +45,22 @@ export async function transcribeAudio(inputPath) {
 
   const clean = {
     language: transcript.language,
-    duration: transcript.duration,
+    duration: secsToTimestamp(transcript.duration),
     text: transcript.text,
-    segments: transcript.segments.map(({ id, start, end, text }) => ({ id, start, end, text })),
-    words: transcript.words,
+    segments: transcript.segments.map(({ id, start, end, text }) => ({
+      id,
+      start: secsToTimestamp(start),
+      end: secsToTimestamp(end),
+      text,
+    })),
+    words: transcript.words.map(({ word, start, end }) => ({
+      word,
+      start: secsToTimestamp(start),
+      end: secsToTimestamp(end),
+    })),
   };
 
-  fs.mkdirSync("public", { recursive: true });
+  fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(clean, null, 2));
 
   console.log(`Audio transcript saved: ${outputPath}`);

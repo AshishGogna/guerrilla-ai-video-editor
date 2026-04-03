@@ -12,6 +12,7 @@ Timeline has:
 
 Tracks -
 Have multiple tracks
+Tracks order for video clips: the track last is shown on top, the previous below it, and so on.
 A track must have:
 1. Track id
 2. Description: what's in this track
@@ -19,17 +20,25 @@ A track must have:
 
 Clips -
 Clips live inside a tracks.
-Types of clips: Audio, Video.
+Types of clips: Audio, Video, MotionGraphic.
 Each clip must have
-1. Source file
-2. Start time
-3. Duration
-4. Descrtiption - Why is this clip placed here.
-5. AudioMuted: Yes/No
-6. Transition
+1. Source file: Applicable for non motion graphics clips
+2. Start time: Where this clip starts on the timeline
+3. Duration: How long this clip lasts on the timeline
+4. Source start: Where to begin playback in the source file.
+5. Description - Why is this clip placed here.
+6. AudioMuted: Yes/No
+7. Transition
+8. MotionGraphicPrompt: 
+    8.1. Only applicable for motion graphics clips. 
+    8.2. Describe how they look, animations and everything related to them in detail.
+    8.3. For motion graphics which are depended on transcripts, attach transcripts.
+
 
 -- Rules --
-1. The timeline must have NO gaps — every second must be covered by a clip.
-2. Tracks order for video clips: the track first is shown on top, the next below it, and so on.
-3. Timestaps of audio transcripts are in seconds. Timestamps of Visual transcripts are in MM:SS. The clips must have timestamps in MM:SS.
-4. In transition of a clip, how it will transition to next clip. Keep it hard cut by default.
+1. The timeline must have NO gaps
+2. All timestamps (in transcripts and in the editing plan) are in HH:MM:SS:mmm format (hours:minutes:seconds:milliseconds). Use them directly.
+3. In transition of a clip, how it will transition to next clip. Keep it hard cut by default.
+4. Motion graphics must be in dedicated track(s) at the last, so that they render on top.
+5. Source start is REQUIRED for every Audio and Video clip. For speaker clips, source start must equal the timeline start time to stay in sync with continuous audio. For trailer/B-roll clips, source start must be the specific timecode from the visual transcript that shows the desired scene.
+6. Videos in different tracks must not overlap. That means two videos can't play in the same time range.

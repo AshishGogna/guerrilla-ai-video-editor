@@ -53,31 +53,49 @@ const tools = [
   },
 ];
 
-const toolHandlers = {
-  transcribeAudio: async ({ inputPath }) => {
-    const outputPath = await transcribeAudio(inputPath);
-    return fs.readFileSync(outputPath, "utf-8");
-  },
-  transcribeVideo: async ({ inputPath, prompt }) => {
-    const outputPath = await transcribeVideo(inputPath, prompt);
-    return fs.readFileSync(outputPath, "utf-8");
-  },
-};
+function getToolHandlers(sessionId) {
+  return {
+    transcribeAudio: async ({ inputPath }) => {
+      const outputPath = await transcribeAudio(inputPath, sessionId);
+      return fs.readFileSync(outputPath, "utf-8");
+    },
+    transcribeVideo: async ({ inputPath, prompt }) => {
+      const outputPath = await transcribeVideo(inputPath, prompt, sessionId);
+      return fs.readFileSync(outputPath, "utf-8");
+    },
+  };
+}
 
 /**
  * @param {string} prompt - User prompt text
  * @param {string} model - One of: gpt-5.4, gpt-5.4-mini
+ * @param {string} [sessionId] - Session identifier for saving message history
  * @returns {Promise<string>} AI response text
  */
-export async function chat(prompt, model) {
+export async function chat(prompt, model, sessionId) {
   if (!MODELS.includes(model)) {
     throw new Error(`Unknown model: ${model}. Available: ${MODELS.join(", ")}`);
   }
 
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: prompt },
-  ];
+  const toolHandlers = getToolHandlers(sessionId);
+  const historyPath = sessionId ? path.join("public", sessionId, "messageHistory.json") : null;
+
+  const messages = [{ role: "system", content: systemPrompt }];
+
+  if (historyPath && fs.existsSync(historyPath)) {
+    const previous = JSON.parse(fs.readFileSync(historyPath, "utf-8"));
+    if (Array.isArray(previous) && previous.length > 0) {
+      if (previous[0].role) {
+        messages.push(...previous.filter(m => m.role !== "system"));
+      } else if (previous[0].messages) {
+        for (const entry of previous) {
+          messages.push(...entry.messages.filter(m => m.role !== "system"));
+        }
+      }
+    }
+  }
+
+  messages.push({ role: "user", content: prompt });
 
   while (true) {
     const response = await openai.chat.completions.create({
@@ -112,6 +130,18 @@ export async function chat(prompt, model) {
       continue;
     }
 
+    messages.push({ role: "assistant", content: choice.message.content });
+
+    if (sessionId) {
+      saveMessageHistory(sessionId, messages);
+    }
+
     return choice.message.content;
   }
+}
+
+function saveMessageHistory(sessionId, messages) {
+  const historyPath = path.join("public", sessionId, "messageHistory.json");
+  fs.mkdirSync(path.dirname(historyPath), { recursive: true });
+  fs.writeFileSync(historyPath, JSON.stringify(messages, null, 2));
 }
