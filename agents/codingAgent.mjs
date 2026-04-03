@@ -10,13 +10,13 @@ const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptCodingAge
 const MAIN_TSX = path.join(__dirname, "..", "src", "Main.tsx");
 
 /**
- * Coding agent: asks AI to generate Remotion code and writes it to Main.tsx.
+ * Coding agent: generates Remotion code from an editing plan and writes it to Main.tsx.
  * Also executes any shell commands the AI returns (e.g. npm install).
  *
- * @param {string} userPrompt - The user's editing prompt
+ * @param {string} editingPlan - The editing plan from the planning agent
  */
-export async function codingAgent(userPrompt) {
-  const prompt = `${systemPrompt}\n\nUser request:\n${userPrompt}`;
+export async function codingAgent(editingPlan) {
+  const prompt = `${systemPrompt}\n\nEditing plan (execute exactly as specified):\n${editingPlan}`;
   const response = await chat(prompt, "gpt-5.4");
 
   let parsed;

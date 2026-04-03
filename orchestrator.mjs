@@ -1,3 +1,4 @@
+import { planningAgent, getExistingPlan } from "./agents/planningAgent.mjs";
 import { codingAgent } from "./agents/codingAgent.mjs";
 import { renderingAgent } from "./agents/renderingAgent.mjs";
 
@@ -8,9 +9,13 @@ import { renderingAgent } from "./agents/renderingAgent.mjs";
 export async function orchestrate(prompt, sessionId) {
   console.log(`[orchestrator] Starting session: ${sessionId}\n`);
 
-  //dont uncomment this for now.
-  console.log("[orchestrator] Running coding agent...");
-  await codingAgent(prompt);
+  // console.log("[orchestrator] Running planning agent...");
+  // const plan = await planningAgent(prompt);
+
+  const plan = getExistingPlan();
+
+  console.log("\n[orchestrator] Running coding agent...");
+  await codingAgent(plan);
 
   console.log("\n[orchestrator] Running rendering agent...");
   await renderingAgent(sessionId);

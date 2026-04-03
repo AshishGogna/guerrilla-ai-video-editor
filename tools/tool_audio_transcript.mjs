@@ -33,8 +33,16 @@ export async function transcribeAudio(inputPath) {
     timestamp_granularities: ["segment", "word"],
   });
 
+  const clean = {
+    language: transcript.language,
+    duration: transcript.duration,
+    text: transcript.text,
+    segments: transcript.segments.map(({ id, start, end, text }) => ({ id, start, end, text })),
+    words: transcript.words,
+  };
+
   fs.mkdirSync("public", { recursive: true });
-  fs.writeFileSync(outputPath, JSON.stringify(transcript, null, 2));
+  fs.writeFileSync(outputPath, JSON.stringify(clean, null, 2));
 
   console.log(`Audio transcript saved: ${outputPath}`);
   return outputPath;
