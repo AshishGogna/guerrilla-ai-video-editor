@@ -4,4 +4,6 @@ Scene by scene:
 2. End time
 3. Description of the scene: what's happening, key objects, environment, etc etc.
 
+Dark cuts should not be part of the transcript. They should be part of no timestamps.
+
 Output as json.

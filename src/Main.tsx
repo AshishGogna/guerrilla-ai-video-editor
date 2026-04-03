@@ -1,88 +1,52 @@
 import React from 'react';
-import {AbsoluteFill, Audio, Sequence, Video, staticFile, useCurrentFrame, interpolate, spring} from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  OffthreadVideo,
+  Sequence,
+  staticFile,
+} from 'remotion';
 
-const fps = 24;
+const FPS = 24;
+const ts = (mmss: string) => {
+  const [m, s] = mmss.split(':').map(Number);
+  return Math.round((m * 60 + s) * FPS);
+};
+const t = (seconds: number) => Math.round(seconds * FPS);
 
-const TrailerClip: React.FC<{
-  start: number;
-  duration: number;
-  from: number;
-  scaleFrom?: number;
-}> = ({start, duration, from, scaleFrom = 1.06}) => {
-  const frame = useCurrentFrame();
-  const localFrame = frame - start;
-  const scale = interpolate(localFrame, [0, 8], [scaleFrom, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const opacity = interpolate(localFrame, [0, 4], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
+const TrailerFit: React.FC<{start: string}> = ({start}) => {
   return (
-    <Sequence from={start} durationInFrames={duration}>
-      <AbsoluteFill style={{opacity, overflow: 'hidden', backgroundColor: 'black'}}>
-        <Video
-          src={staticFile('trailer.mp4')}
-          startFrom={from}
-          muted
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transform: `scale(${scale})`,
-          }}
-        />
-        <AbsoluteFill
-          style={{
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.28) 100%)',
-          }}
-        />
-      </AbsoluteFill>
-    </Sequence>
+    <AbsoluteFill
+      style={{
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'black',
+      }}
+    >
+      <OffthreadVideo
+        src={staticFile('trailer.mp4')}
+        startFrom={ts(start)}
+        muted
+        style={{
+          width: '100%',
+          height: 'auto',
+          objectFit: 'contain',
+        }}
+      />
+    </AbsoluteFill>
   );
 };
 
-const TalkingHead: React.FC<{
-  start: number;
-  duration: number;
-  from: number;
-}> = ({start, duration, from}) => {
-  const frame = useCurrentFrame();
-  const localFrame = frame - start;
-  const entrance = spring({
-    fps,
-    frame: Math.max(0, localFrame),
-    config: {damping: 200, stiffness: 180},
-  });
-  const scale = interpolate(entrance, [0, 1], [1.04, 1]);
-  const opacity = interpolate(localFrame, [0, 5], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
+const SpeakerFull: React.FC<{startSeconds: number}> = ({startSeconds}) => {
   return (
-    <Sequence from={start} durationInFrames={duration}>
-      <AbsoluteFill style={{backgroundColor: 'black', opacity}}>
-        <Video
-          src={staticFile('ashish.mp4')}
-          startFrom={from}
-          muted
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transform: `scale(${scale})`,
-          }}
-        />
-        <AbsoluteFill
-          style={{
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.34) 100%)',
-          }}
-        />
-      </AbsoluteFill>
-    </Sequence>
+    <AbsoluteFill style={{backgroundColor: 'black'}}>
+      <OffthreadVideo
+        src={staticFile('ashish.mp4')}
+        startFrom={t(startSeconds)}
+        muted
+        style={{width: '100%', height: '100%', objectFit: 'cover'}}
+      />
+    </AbsoluteFill>
   );
 };
 
@@ -91,21 +55,40 @@ export const Main: React.FC = () => {
     <AbsoluteFill style={{backgroundColor: 'black'}}>
       <Audio src={staticFile('ashish.mp4')} />
 
-      <TalkingHead start={0} duration={120} from={0} />
+      {/* Cut 1: Open on the speaker to establish the reviewer and hook the audience with the first claim. */}
+      <Sequence from={t(0)} durationInFrames={t(5.26)}>
+        <SpeakerFull startSeconds={0} />
+      </Sequence>
 
-      <TrailerClip start={120} duration={36} from={120} scaleFrom={1.08} />
-      <TrailerClip start={156} duration={24} from={144} scaleFrom={1.05} />
-      <TrailerClip start={180} duration={24} from={294} scaleFrom={1.07} />
-      <TrailerClip start={204} duration={30} from={1980} scaleFrom={1.06} />
-      <TrailerClip start={234} duration={30} from={2424} scaleFrom={1.08} />
-      <TrailerClip start={264} duration={24} from={2544} scaleFrom={1.04} />
-      <TrailerClip start={288} duration={24} from={2514} scaleFrom={1.06} />
-      <TrailerClip start={312} duration={40} from={1248} scaleFrom={1.05} />
-      <TrailerClip start={352} duration={40} from={3552} scaleFrom={1.07} />
-      <TrailerClip start={392} duration={97} from={4032} scaleFrom={1.04} />
+      {/* Cut 2: Switch to the trailer exactly as the voiceover starts describing cosmic chaos and the dog-in-space visual. */}
+      <Sequence from={t(5.26)} durationInFrames={t(4.82)}>
+        <TrailerFit start="01:48" />
+      </Sequence>
 
-      <TalkingHead start={489} duration={56} from={744} />
-      <TalkingHead start={545} duration={248} from={660} />
+      {/* Cut 3: Match the line about goons in a neon dive bar with the clearest bar-threat setup from the trailer. */}
+      <Sequence from={t(10.08)} durationInFrames={t(4.26)}>
+        <TrailerFit start="01:25" />
+      </Sequence>
+
+      {/* Cut 4: Escalate into pure action to sell the 'badass while everything explodes' line with nonstop combat imagery. */}
+      <Sequence from={t(14.34)} durationInFrames={t(6.2)}>
+        <TrailerFit start="02:00" />
+      </Sequence>
+
+      {/* Cut 5: Land the heat-vision mention on the exact heat-vision shots for strongest visual-word sync. */}
+      <Sequence from={t(20.54)} durationInFrames={t(4.12)}>
+        <TrailerFit start="01:50" />
+      </Sequence>
+
+      {/* Cut 6: Bring the speaker back in the middle for the theatrical callout so the CTA feels direct and personal. */}
+      <Sequence from={t(24.66)} durationInFrames={t(2.78)}>
+        <SpeakerFull startSeconds={24.66} />
+      </Sequence>
+
+      {/* Cut 7: Stay on the speaker through the closing share-and-follow CTA to end with personality and continuity. */}
+      <Sequence from={t(27.44)} durationInFrames={t(5.62)}>
+        <SpeakerFull startSeconds={27.44} />
+      </Sequence>
     </AbsoluteFill>
   );
 };
