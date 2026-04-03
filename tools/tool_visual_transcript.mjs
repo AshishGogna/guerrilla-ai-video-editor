@@ -3,6 +3,7 @@ import { GoogleAIFileManager } from "@google/generative-ai/server";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptVisualTranscript.txt"), "utf-8").trim();
@@ -85,8 +86,16 @@ export async function transcribeVideo(inputPath, prompt) {
     frames = [{ timestamp: 0, description: responseText }];
   }
 
+  const fpsStr = execSync(
+    `ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "${inputPath}"`,
+    { encoding: "utf-8" },
+  ).trim();
+  const [num, den] = fpsStr.split("/").map(Number);
+  const fps = den ? Math.round((num / den) * 100) / 100 : num;
+
   const output = {
     source: inputPath,
+    fps,
     frames,
   };
 
