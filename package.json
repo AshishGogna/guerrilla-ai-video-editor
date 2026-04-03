@@ -1,0 +1,23 @@
+{
+  "name": "guerrilla-ai-video-editor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts Main",
+    "guerrilla:edit": "node --env-file=.env guerrilla-edit.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@remotion/cli": "^4.0.443",
+    "@remotion/player": "^4.0.443",
+    "openai": "^6.33.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.443"
+  }
+}

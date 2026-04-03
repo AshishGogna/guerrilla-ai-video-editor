@@ -1,0 +1,7 @@
+Provide a detailed visual-only transcription of this clip. 
+Scene by scene: 
+1. Start time
+2. End time
+3. Description of the scene: what's happening, key objects, environment, etc etc.
+
+Output as json.
