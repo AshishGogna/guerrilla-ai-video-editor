@@ -5,15 +5,24 @@ You receive an editing plan that specifies every track and clip on the timeline.
 Respond with ONLY a JSON object in this exact format:
 {
   "commands": ["npm install <package>"],
-  "code": "...full Main.tsx content...",
-  "config": { "durationInFrames": 300, "fps": 24, "width": 1080, "height": 1920 }
+  "code": "...full file content..."
 }
 
 Rules:
 - "commands" is an array of shell commands to run (e.g. npm install). Use an empty array if none needed.
-- "code" must be the COMPLETE content of a valid Main.tsx file using Remotion.
-- "config" must contain durationInFrames, fps (always 24), width, and height. durationInFrames = total video length in seconds × 24.
-- The component must be a named export: export const Main: React.FC = () => { ... }
+- "code" must be a COMPLETE self-contained Remotion file that includes:
+  1. A named export for the main component: export const Main: React.FC = () => { ... }
+  2. A RemotionRoot component that wraps Main in a <Composition> with the correct durationInFrames, fps (always 24), width, and height.
+  3. A registerRoot(RemotionRoot) call at the bottom.
+  durationInFrames = total video length in seconds × 24.
+  Example structure:
+    import { registerRoot } from "remotion";
+    // ... other imports ...
+    export const Main: React.FC = () => { ... };
+    export const RemotionRoot: React.FC = () => (
+      <Composition id="Main" component={Main} durationInFrames={...} fps={24} width={1080} height={1920} />
+    );
+    registerRoot(RemotionRoot);
 - You can use any Remotion APIs: AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, Audio, OffthreadVideo, Img, interpolate, spring, etc.
 - ALWAYS use <OffthreadVideo> instead of <Video> for all video playback. It is frame-accurate and prevents jitter.
 - NEVER use <Img> for video/audio files (.mp4, .webm, .mov, .mp3, etc). Use <OffthreadVideo> for video files and <Audio> for audio files. <Img> is ONLY for image files (.png, .jpg, .gif, .webp, .svg).
@@ -25,7 +34,7 @@ Rules:
 Timestamps:
 - The editing plan uses the format HH:MM:SS:mmm (hours:minutes:seconds:milliseconds).
 - The composition fps is ALWAYS 24. Remotion conforms source clips automatically.
-- Define this helper at the top of Main.tsx:
+- Define this helper at the top of the file (before the Main component):
   const FPS = 24;
   const ts = (t: string) => { const [h, m, s, ms] = t.split(':').map(Number); return Math.round((h * 3600 + m * 60 + s + ms / 1000) * FPS); };
 - Use ts() for ALL timestamp-to-frame conversions:
@@ -39,6 +48,15 @@ Structuring:
 4. For speaker clips where the audio plays continuously, startFrom must equal the timeline position so video stays in sync with audio.
 5. Mute videos when only visuals are needed: add muted to <OffthreadVideo>.
 6. NEVER use endAt on <OffthreadVideo>. The Sequence's durationInFrames controls how long a clip plays.
-7. NEVER use useCurrentFrame() for timing visibility of elements. Use <Sequence from={ts(...)} durationInFrames={...}> to control when things appear. For example, to show a word at a specific time, wrap it in its own Sequence with an absolute from value. useCurrentFrame() returns frames relative to the parent Sequence, which causes timing bugs.
-8. Every frame of the timeline must have a visible video clip. No gaps between clips.
-9. Use staticFile() with ONLY the filename, never the full absolute path.
+7. NEVER use useCurrentFrame() for timing visibility of elements.
+8. NEVER nest a <Sequence> inside another <Sequence>. A child Sequence's `from` is RELATIVE to its parent, not absolute. This causes words to be invisible when the parent starts at a non-zero time.
+   WRONG (nested — only first batch works by coincidence):
+     <Sequence from={ts('00:00:02:000')} durationInFrames={...}>
+       <Sequence from={ts('00:00:02:000')}><Word .../></Sequence>  // actual position = frame 48+48 = 96, WRONG
+     </Sequence>
+   CORRECT (flat — every word gets ONE Sequence with absolute from):
+     <Sequence from={ts('00:00:02:000')} durationInFrames={ts('00:00:00:500')}><Word text="because" .../></Sequence>
+     <Sequence from={ts('00:00:02:500')} durationInFrames={ts('00:00:00:400')}><Word text="this" .../></Sequence>
+   For motion graphics, use a FLAT list of Sequences inside a single <AbsoluteFill>. Each word gets its own <Sequence> with absolute `from` and explicit `durationInFrames`. No wrapper Sequences, no batch components.
+9. Every frame of the timeline must have a visible video clip. No gaps between clips.
+10. Use staticFile() with ONLY the filename, never the full absolute path.

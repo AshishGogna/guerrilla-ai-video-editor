@@ -7,11 +7,9 @@ import { chat } from "../tools/ai.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const systemPrompt = fs.readFileSync(path.join(__dirname, "systemPromptCodingAgent.txt"), "utf-8").trim();
 
-const MAIN_TSX = path.join(__dirname, "..", "src", "Main.tsx");
-
 /**
- * Coding agent: generates Remotion code from an editing plan and writes it to Main.tsx.
- * Also executes any shell commands the AI returns (e.g. npm install).
+ * Coding agent: generates a self-contained Remotion file from an editing plan.
+ * Writes to src/{sessionId}_remotion.tsx
  *
  * @param {string} editingPlan - The editing plan from the planning agent
  * @param {string} sessionId - Session identifier
@@ -29,7 +27,7 @@ export async function codingAgent(editingPlan, sessionId) {
     throw new Error("AI did not return valid JSON");
   }
 
-  const { commands = [], code, config } = parsed;
+  const { commands = [], code } = parsed;
 
   if (commands.length > 0) {
     for (const cmd of commands) {
@@ -46,15 +44,7 @@ export async function codingAgent(editingPlan, sessionId) {
     throw new Error("AI response missing 'code' field");
   }
 
-  fs.writeFileSync(MAIN_TSX, code);
-  console.log(`[codingAgent] Main.tsx updated`);
-
-  if (config) {
-    const configJson = JSON.stringify(config, null, 2);
-    const sessionConfigPath = path.join("public", sessionId, "composition.json");
-    fs.writeFileSync(sessionConfigPath, configJson);
-    const rootConfigPath = path.join(__dirname, "..", "public", "composition.json");
-    fs.writeFileSync(rootConfigPath, configJson);
-    console.log(`[codingAgent] composition.json updated`);
-  }
+  const outputPath = path.join(__dirname, "..", "src", `${sessionId}_remotion.tsx`);
+  fs.writeFileSync(outputPath, code);
+  console.log(`[codingAgent] ${sessionId}_remotion.tsx updated`);
 }

@@ -82,18 +82,18 @@ export async function chat(prompt, model, sessionId) {
 
   const messages = [{ role: "system", content: systemPrompt }];
 
-  if (historyPath && fs.existsSync(historyPath)) {
-    const previous = JSON.parse(fs.readFileSync(historyPath, "utf-8"));
-    if (Array.isArray(previous) && previous.length > 0) {
-      if (previous[0].role) {
-        messages.push(...previous.filter(m => m.role !== "system"));
-      } else if (previous[0].messages) {
-        for (const entry of previous) {
-          messages.push(...entry.messages.filter(m => m.role !== "system"));
-        }
-      }
-    }
-  }
+  // if (historyPath && fs.existsSync(historyPath)) {
+  //   const previous = JSON.parse(fs.readFileSync(historyPath, "utf-8"));
+  //   if (Array.isArray(previous) && previous.length > 0) {
+  //     if (previous[0].role) {
+  //       messages.push(...previous.filter(m => m.role !== "system"));
+  //     } else if (previous[0].messages) {
+  //       for (const entry of previous) {
+  //         messages.push(...entry.messages.filter(m => m.role !== "system"));
+  //       }
+  //     }
+  //   }
+  // }
 
   messages.push({ role: "user", content: prompt });
 

@@ -15,10 +15,10 @@ export async function orchestrate(prompt, sessionId) {
   console.log(`[orchestrator] Starting session: ${sessionId}`);
   console.log(`[orchestrator] Output dir: ${sessionDir}\n`);
 
-  // console.log("[orchestrator] Running planning agent...");
-  // const plan = await planningAgent(prompt, sessionId);
+  console.log("[orchestrator] Running planning agent...");
+  const plan = await planningAgent(prompt, sessionId);
 
-  const plan = getExistingPlan(sessionId); // dont remove
+  // const plan = getExistingPlan(sessionId); // dont remove
   console.log("\n[orchestrator] Running coding agent...");
   await codingAgent(plan, sessionId);
 
