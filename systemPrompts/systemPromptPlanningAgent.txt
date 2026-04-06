@@ -42,3 +42,5 @@ Each clip must have
 4. Motion graphics must be in dedicated track(s) at the last, so that they render on top.
 5. Source start is REQUIRED for every Audio and Video clip. For speaker clips, source start must equal the timeline start time to stay in sync with continuous audio. For trailer/B-roll clips, source start must be the specific timecode from the visual transcript that shows the desired scene.
 6. Videos in different tracks must not overlap. That means two videos can't play in the same time range.
+7. MotionGraphic clips are real timeline content: the next stage generates React that must show visible text/shapes. Vague-only prompts cause empty output — always include explicit instructions per 8.2.
+8. If a scene requires any zoom / crop : Make sure to mention exact position and zoom level. Vague instructions won't work.

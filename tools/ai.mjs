@@ -75,28 +75,15 @@ function getToolHandlers(sessionId) {
  * @param {string} [sessionId] - Session identifier for saving message history
  * @returns {Promise<string>} AI response text
  */
-export async function chat(prompt, model, sessionId) {
+export async function chat(systemPromptForRequest, prompt, model, sessionId) {
   if (!MODELS.includes(model)) {
     throw new Error(`Unknown model: ${model}. Available: ${MODELS.join(", ")}`);
   }
 
   const toolHandlers = getToolHandlers(sessionId);
-  const historyPath = sessionId ? path.join("public", sessionId, "messageHistory.json") : null;
 
   const messages = [{ role: "system", content: systemPrompt }];
-
-  // if (historyPath && fs.existsSync(historyPath)) {
-  //   const previous = JSON.parse(fs.readFileSync(historyPath, "utf-8"));
-  //   if (Array.isArray(previous) && previous.length > 0) {
-  //     if (previous[0].role) {
-  //       messages.push(...previous.filter(m => m.role !== "system"));
-  //     } else if (previous[0].messages) {
-  //       for (const entry of previous) {
-  //         messages.push(...entry.messages.filter(m => m.role !== "system"));
-  //       }
-  //     }
-  //   }
-  // }
+  messages.push({ role: "system", content: systemPromptForRequest });
 
   messages.push({ role: "user", content: prompt });
 

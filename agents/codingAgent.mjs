@@ -18,8 +18,8 @@ const systemPrompt = fs.readFileSync(
  * @param {string} sessionId - Session identifier
  */
 export async function codingAgent(editingPlan, sessionId) {
-  const prompt = `${systemPrompt}\n\nEditing plan (execute exactly as specified):\n${editingPlan}`;
-  const response = await chat(prompt, "gpt-5.4", sessionId);
+  const prompt = `Editing plan (execute exactly as specified):\n${editingPlan}`;
+  const response = await chat(systemPrompt, prompt, "gpt-5.4", sessionId);
 
   let parsed;
   try {

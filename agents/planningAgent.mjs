@@ -9,6 +9,35 @@ const systemPrompt = fs.readFileSync(
   "utf-8",
 ).trim();
 
+/** Audio / visual transcript outputs from tool_audio_transcript / tool_visual_transcript. */
+function isTranscriptFile(name) {
+  return name.endsWith(".audio.json") || name.endsWith(".video.json");
+}
+
+/**
+ * Reads all transcript JSON files in public/<sessionId>/ and returns one markdown-ish block, or "".
+ */
+function readSessionTranscriptsBlock(sessionId) {
+  const dir = path.join("public", sessionId);
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
+    return "";
+  }
+  const names = fs.readdirSync(dir).filter(isTranscriptFile).sort();
+  if (names.length === 0) return "";
+
+  const parts = names.map((name) => {
+    const full = path.join(dir, name);
+    try {
+      const body = fs.readFileSync(full, "utf-8").trim();
+      return `### ${name}\n${body}`;
+    } catch (e) {
+      return `### ${name}\n[failed to read: ${e?.message ?? e}]`;
+    }
+  });
+
+  return `Available transcripts (${names.length} file(s)):\n\n${parts.join("\n\n---\n\n")}`;
+}
+
 /**
  * Planning agent: creates an editing plan from the user prompt and transcripts.
  *
@@ -18,11 +47,12 @@ const systemPrompt = fs.readFileSync(
  */
 export async function planningAgent(userPrompt, sessionId) {
   const planPath = path.join("public", sessionId, "editingPlan.txt");
-  const existingPlan = fs.existsSync(planPath) ? fs.readFileSync(planPath, "utf-8").trim() : "";
-  const prompt = existingPlan
-    ? `${systemPrompt}\n\nCurrent editing plan:\n${existingPlan}\n\nUser request:\n${userPrompt}`
-    : `${systemPrompt}\n\nUser request:\n${userPrompt}`;
-  const response = await chat(prompt, "gpt-5.4", sessionId);
+  const transcriptsBlock = readSessionTranscriptsBlock(sessionId);
+
+  let finalUserPrompt = userPrompt;
+  if (transcriptsBlock) finalUserPrompt += `\n\nTranscripts -\n${transcriptsBlock}`;
+
+  const response = await chat(systemPrompt, finalUserPrompt, "gpt-5.4", sessionId);
 
   fs.writeFileSync(planPath, response);
   console.log(`[planningAgent] Plan saved: ${planPath}`);

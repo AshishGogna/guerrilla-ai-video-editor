@@ -54,7 +54,7 @@ Final edited video - [![Demo Video 1 - Supergirl trailer review](https://youtube
 
 Execution command - 
 ```bash
-npm run guerrilla:edit -- <supergirl-trailer-review> {absolute-path}/guerrilla-ai-video-editor/public/VideoEditingPrompt.txt
+npm run guerrilla:edit -- supergirl-trailer-review {absolute-path}/guerrilla-ai-video-editor/public/VideoEditingPrompt.txt
 ```
 
 Prompt written in VideoEditingPrompt.txt - 

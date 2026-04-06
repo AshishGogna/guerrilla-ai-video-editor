@@ -34,16 +34,18 @@ Rules:
 Timestamps:
 - The editing plan uses the format HH:MM:SS:mmm (hours:minutes:seconds:milliseconds).
 - The composition fps is ALWAYS 24. Remotion conforms source clips automatically.
-- Define this helper at the top of the file (before the Main component):
+- Define these helpers at the top of the file (before the Main component):
   const FPS = 24;
   const ts = (t: string) => { const [h, m, s, ms] = t.split(':').map(Number); return Math.round((h * 3600 + m * 60 + s + ms / 1000) * FPS); };
-- Use ts() for ALL timestamp-to-frame conversions:
-  <Sequence from={ts('00:00:05:000')} durationInFrames={ts('00:00:03:000')}>
+  const dur = (t: string) => Math.max(1, ts(t));
+- Use ts() for absolute times and for startFrom. For every <Sequence> durationInFrames, use dur('HH:MM:SS:mmm') — NOT raw ts() for duration. Short word-length gaps (e.g. 20ms) round to 0 frames at 24fps and Remotion throws "durationInFrames must be positive, but got 0".
+- Examples:
+  <Sequence from={ts('00:00:05:000')} durationInFrames={dur('00:00:03:000')}>
   <OffthreadVideo startFrom={ts('01:24:00:000')} />
 
 Structuring:
 1. Tracks: Use stacked <AbsoluteFill> layers as tracks. Later siblings render ON TOP. So overlay tracks (like motion graphics) must be the LAST <AbsoluteFill> in the JSX.
-2. Clips: Place clips on the timeline using <Sequence from={ts('HH:MM:SS:mmm')} durationInFrames={ts('HH:MM:SS:mmm')}>.
+2. Clips: Place clips on the timeline using <Sequence from={ts('HH:MM:SS:mmm')} durationInFrames={dur('HH:MM:SS:mmm')}> (always dur for duration).
 3. EVERY <OffthreadVideo> MUST have a startFrom prop set to the clip's "Source start" from the editing plan. This tells Remotion where in the source file to begin playback. Without it, every clip plays from the start of the file. Example: <OffthreadVideo src={staticFile('trailer.mp4')} startFrom={ts('01:24:00:000')} muted />
 4. For speaker clips where the audio plays continuously, startFrom must equal the timeline position so video stays in sync with audio.
 5. Mute videos when only visuals are needed: add muted to <OffthreadVideo>.
@@ -55,8 +57,14 @@ Structuring:
        <Sequence from={ts('00:00:02:000')}><Word .../></Sequence>  // actual position = frame 48+48 = 96, WRONG
      </Sequence>
    CORRECT (flat — every word gets ONE Sequence with absolute from):
-     <Sequence from={ts('00:00:02:000')} durationInFrames={ts('00:00:00:500')}><Word text="because" .../></Sequence>
-     <Sequence from={ts('00:00:02:500')} durationInFrames={ts('00:00:00:400')}><Word text="this" .../></Sequence>
+     <Sequence from={ts('00:00:02:000')} durationInFrames={dur('00:00:00:500')}><Word text="because" .../></Sequence>
+     <Sequence from={ts('00:00:02:500')} durationInFrames={dur('00:00:00:400')}><Word text="this" .../></Sequence>
    For motion graphics, use a FLAT list of Sequences inside a single <AbsoluteFill>. Each word gets its own <Sequence> with absolute `from` and explicit `durationInFrames`. No wrapper Sequences, no batch components.
 9. Every frame of the timeline must have a visible video clip. No gaps between clips.
 10. Use staticFile() with ONLY the filename, never the full absolute path.
+
+Motion graphics (every clip in the plan whose type is MotionGraphic):
+11. Implement EVERY MotionGraphic clip from the plan - Skipping or replacing with an empty layer is wrong.
+12. Each clip: <Sequence from={ts('START')} durationInFrames={dur('DURATION')}> where START and DURATION are that clip's Start time and Duration from the plan. Use dur() for DURATION so short clips never become 0 frames.
+14. NEVER output an empty <AbsoluteFill />, a transparent-only <AbsoluteFill>, or a Sequence with no visible children "because" the prompt describes particles/glitch/etc. Complex effects are optional; the quoted title text is mandatory.
+15. Place ALL MotionGraphic Sequences inside the LAST <AbsoluteFill> in Main (dedicated overlay track), above all video.
