@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { copyAgent } from "./agents/copyAgent.mjs";
 import { planningAgent, getExistingPlan } from "./agents/planningAgent.mjs";
+import { EDLAgent } from "./agents/EDLAgent.mjs";
 import { codingAgent } from "./agents/codingAgent.mjs";
 import { renderingAgent } from "./agents/renderingAgent.mjs";
 
@@ -18,12 +19,15 @@ export async function orchestrate(prompt, sessionId) {
 
   console.log("[orchestrator] Running copy agent...");
   prompt = await copyAgent(prompt, sessionId);
-  console.log("[orchestrator] Prompt after copy agent:", prompt);
 
-  // console.log("[orchestrator] Running planning agent...");
-  // const plan = await planningAgent(prompt, sessionId);
+  console.log("[orchestrator] Running planning agent...");
+  const plan = await planningAgent(prompt, sessionId);
 
-  // // const plan = getExistingPlan(sessionId); // dont remove
+  // const plan = getExistingPlan(sessionId); // dont remove
+
+  console.log("\n[orchestrator] Running EDL agent (FCPXML)...");
+  await EDLAgent(plan, sessionId);
+
   // console.log("\n[orchestrator] Running coding agent...");
   // await codingAgent(plan, sessionId);
 
