@@ -22,10 +22,10 @@ export async function orchestrate(prompt, sessionId, output = "video") {
   console.log("[orchestrator] Running copy agent...");
   prompt = await copyAgent(prompt, sessionId);
 
-  // console.log("[orchestrator] Running planning agent...");
-  // const plan = await planningAgent(prompt, sessionId);
+  console.log("[orchestrator] Running planning agent...");
+  const plan = await planningAgent(prompt, sessionId);
 
-  const plan = getExistingPlan(sessionId); // dont remove
+  // const plan = getExistingPlan(sessionId); // dont remove
 
   if (output === "fcpxml") {
     console.log("\n[orchestrator] Running fcpxml agent...");
