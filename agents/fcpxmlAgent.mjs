@@ -21,20 +21,21 @@ function extractFcpXml(text) {
 }
 
 /**
- * EDL agent: converts an editing plan into an importable FCPXML file.
+ * FCPXML agent: converts an editing plan into an importable FCPXML file.
  *
  * @param {string} editingPlan - The editing plan from the planning agent
  * @param {string} sessionId - Session identifier
  */
-export async function EDLAgent(editingPlan, sessionId) {
-  const prompt = `Convert this editing plan into a single valid FCPXML document:\n\n${editingPlan}`;
+export async function fcpxmlAgent(editingPlan, sessionId) {
+  const prompt =
+    `Convert this editing plan into a single valid FCPXML document:\n\n${editingPlan}`;
   const response = await chat(systemPrompt, prompt, "gpt-5.4", sessionId);
-  let xml = extractFcpXml(response);
+  const xml = extractFcpXml(response);
 
   const outPath = path.join(__dirname, "..", "public", sessionId, "FCPXML.xml");
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   fs.writeFileSync(outPath, xml);
-  console.log(`[EDLAgent] FCPXML saved: ${outPath}`);
+  console.log(`[fcpxmlAgent] FCPXML saved: ${outPath}`);
 
   return xml;
 }

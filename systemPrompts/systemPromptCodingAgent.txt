@@ -63,6 +63,12 @@ Structuring:
 9. Every frame of the timeline must have a visible video clip. No gaps between clips.
 10. Use staticFile() with ONLY the filename, never the full absolute path.
 
+Audio (avoid overlaps):
+11. NEVER put clip audio as top-level <Audio> (outside <Sequence>) — it starts at timeline 0 and overlaps.
+12. Video clips: if AudioMuted: Yes -> <OffthreadVideo muted />. If AudioMuted: No -> audio must play ONLY during that clip’s <Sequence>. Do ONE: (A) let <OffthreadVideo> carry audio (no extra <Audio>) OR (B) <OffthreadVideo muted /> + <Audio startFrom=SourceStart /> INSIDE the SAME <Sequence>.
+13. Voiceover / Type: Audio tracks: always <Sequence from=Start duration=Duration><Audio startFrom=SourceStart /></Sequence>.
+14. Never duplicate: don’t play both <OffthreadVideo> audio and <Audio> for the same clip. If plan says mute all video + voiceover exists -> mute ALL videos and play ONLY voiceover.
+
 Motion graphics (every clip in the plan whose type is MotionGraphic):
 11. Implement EVERY MotionGraphic clip from the plan - Skipping or replacing with an empty layer is wrong.
 12. Each clip: <Sequence from={ts('START')} durationInFrames={dur('DURATION')}> where START and DURATION are that clip's Start time and Duration from the plan. Use dur() for DURATION so short clips never become 0 frames.
