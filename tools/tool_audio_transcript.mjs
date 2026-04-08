@@ -1,8 +1,12 @@
 import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 const openai = new OpenAI();
+
+// Whisper upload limit is ~25MB (26214400 bytes). Keep some headroom.
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 function secsToTimestamp(secs) {
   const h = Math.floor(secs / 3600);
@@ -10,6 +14,70 @@ function secsToTimestamp(secs) {
   const s = Math.floor(secs % 60);
   const ms = Math.round((secs % 1) * 1000);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}:${String(ms).padStart(3, "0")}`;
+}
+
+function fileSizeBytes(p) {
+  try {
+    return fs.statSync(p).size;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert media (e.g. mp4) to mp3.
+ * Tries a higher-quality encode first; caller can re-run with a smaller preset if needed.
+ *
+ * @param {string} inputPath
+ * @param {string} outputPath
+ * @param {"high"|"small"} preset
+ */
+function convertToMp3(inputPath, outputPath, preset = "high") {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+
+  const common = [
+    "-y",
+    "-i",
+    inputPath,
+    "-vn",
+    "-map",
+    "0:a:0?",
+    "-acodec",
+    "libmp3lame",
+  ];
+
+  // High: good quality but still reasonably sized.
+  // Small: more aggressive compression to stay under upload limits.
+  const args =
+    preset === "high"
+      ? [
+          ...common,
+          "-ac",
+          "1",
+          "-ar",
+          "44100",
+          "-b:a",
+          "96k",
+          "-compression_level",
+          "2",
+          outputPath,
+        ]
+      : [
+          ...common,
+          "-ac",
+          "1",
+          "-ar",
+          "16000",
+          "-b:a",
+          "48k",
+          "-compression_level",
+          "7",
+          outputPath,
+        ];
+
+  const cmd = `ffmpeg ${args.map((a) => `"${String(a).replaceAll('"', '\\"')}"`).join(" ")}`;
+  execSync(cmd, { stdio: "ignore" });
+  return outputPath;
 }
 
 /**
@@ -34,7 +102,28 @@ export async function transcribeAudio(inputPath, sessionId) {
     return outputPath;
   }
 
-  const file = fs.createReadStream(inputPath);
+  let actualInputPath = inputPath;
+  const size = fileSizeBytes(inputPath);
+  if (size !== null && size > MAX_UPLOAD_BYTES) {
+    const mp3High = path.join(outDir, `${basename}.whisper.high.mp3`);
+    const mp3Small = path.join(outDir, `${basename}.whisper.small.mp3`);
+
+    console.log(`[tool_audio_transcript] Input exceeds Whisper limit (${size} bytes). Converting to mp3...`);
+
+    // Try higher-quality mp3 first.
+    convertToMp3(inputPath, mp3High, "high");
+    const highSize = fileSizeBytes(mp3High);
+
+    if (highSize !== null && highSize <= MAX_UPLOAD_BYTES) {
+      actualInputPath = mp3High;
+    } else {
+      // Fall back to smaller encode to fit.
+      convertToMp3(inputPath, mp3Small, "small");
+      actualInputPath = mp3Small;
+    }
+  }
+
+  const file = fs.createReadStream(actualInputPath);
 
   const transcript = await openai.audio.transcriptions.create({
     file,
