@@ -8,13 +8,55 @@ Respond with ONLY a JSON object in this exact format:
   "code": "...full file content..."
 }
 
+================================================================================
+MOTION GRAPHICS & ANY TIMED OVERLAY — NON-NEGOTIABLE (read before writing code)
+================================================================================
+Remotion bug you MUST prevent: inside <Sequence from={ts('T')}>, useCurrentFrame() returns
+frames 0,1,2,… RELATIVE to that Sequence, NOT global composition frames.
+
+A) If ANY logic compares to absolute timeline times from the plan (ts('HH:MM:SS:mmm'),
+word start/end, batch start, "when does X appear"), you MUST use global frame:
+   const absFrame = useCurrentFrame() + sequenceFrom;
+   and pass sequenceFrom={ts('T')} on the component where T is EXACTLY the same string as
+   the parent <Sequence from={ts('T')}>.
+   Apply this to subtitles, kinetic words, Word components, batch components, tooltips — everything.
+
+B) NEVER write: if (useCurrentFrame() >= ts('00:00:01:000')) inside a Sequence that does not
+   start at 00:00:00:000. That only works for the first Sequence; all later ones break.
+
+C) Valid patterns (pick one per overlay):
+   • Batch inside one Sequence: <SubtitleRow sequenceFrom={ts('…same as parent…')} … />
+     with absFrame = useCurrentFrame() + sequenceFrom everywhere you compare to ts().
+   • OR flat Sequences only: each word/card gets its own <Sequence from={ts(…)} durationInFrames={dur(…)}>
+     and the inner component may use useCurrentFrame() as relative ONLY if ALL animations
+     are expressed relative to that clip (no ts() from the full timeline).
+
+D) interpolate(): input range must be STRICTLY increasing ([a,b] with a < b). Never [260,0].
+
+E) staticFile paths: session media lives under public/<sessionFolder>/. Every path MUST include
+   that folder: staticFile('<sessionFolder>/filename.ext'). Derive sessionFolder from the plan's
+   Source file paths (e.g. .../public/a4/foo.mp4 → staticFile('a4/foo.mp4')). Never staticFile('foo.mp4')
+   alone — that resolves to public/foo.mp4 and 404s at render.
+
+F) One primary <OffthreadVideo> per video clip unless the plan requires a transition; do not stack
+   two full-screen copies of the same file with different transforms unless intentional — causes pops
+   and harsh cuts.
+
+G) Implement EVERY MotionGraphic clip from the plan. Empty overlays or missing quoted text are wrong.
+   MG Sequences live in the LAST <AbsoluteFill> in Main (top track).
+
+H) NEVER nest <Sequence> inside <Sequence> using absolute-looking from= on the child — child's from
+   is relative to parent and will mis-schedule content.
+
+================================================================================
+
 Rules:
 - "commands" is an array of shell commands to run (e.g. npm install). Use an empty array if none needed.
 - "code" must be a COMPLETE self-contained Remotion file that includes:
   1. A named export for the main component: export const Main: React.FC = () => { ... }
   2. A RemotionRoot component that wraps Main in a <Composition> with the correct durationInFrames, fps (always 24), width, and height.
   3. A registerRoot(RemotionRoot) call at the bottom.
-  durationInFrames = total video length in seconds × 24.
+  durationInFrames = total video length in seconds × 24 (use dur() for the plan's total duration string).
   Example structure:
     import { registerRoot } from "remotion";
     // ... other imports ...
@@ -26,51 +68,38 @@ Rules:
 - You can use any Remotion APIs: AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, Audio, OffthreadVideo, Img, interpolate, spring, etc.
 - ALWAYS use <OffthreadVideo> instead of <Video> for all video playback. It is frame-accurate and prevents jitter.
 - NEVER use <Img> for video/audio files (.mp4, .webm, .mov, .mp3, etc). Use <OffthreadVideo> for video files and <Audio> for audio files. <Img> is ONLY for image files (.png, .jpg, .gif, .webp, .svg).
-- Use staticFile() to reference files in the public/ directory. Example: staticFile('myfile.mp4') resolves to the file at public/myfile.mp4.
 - Do NOT include any explanation, markdown, or text outside the JSON object.
 - Keep the code as simple and clean as possible.
 - In the code, add comments on top of each cut explaining why this cut is placed there.
 
 Timestamps:
-- The editing plan uses the format HH:MM:SS:mmm (hours:minutes:seconds:milliseconds).
-- The composition fps is ALWAYS 24. Remotion conforms source clips automatically.
+- The editing plan uses the format HH:MM:SS:mmm (hours:minutes:seconds:milliseconds). Exactly four numeric segments after splitting on ':'; if the plan has a typo with extra colons, normalize to four segments before using in ts().
+- The composition fps is ALWAYS 24 (ignore "30 FPS" in plan notes for Remotion output unless explicitly asked elsewhere).
 - Define these helpers at the top of the file (before the Main component):
   const FPS = 24;
   const ts = (t: string) => { const [h, m, s, ms] = t.split(':').map(Number); return Math.round((h * 3600 + m * 60 + s + ms / 1000) * FPS); };
   const dur = (t: string) => Math.max(1, ts(t));
-- Use ts() for absolute times and for startFrom. For every <Sequence> durationInFrames, use dur('HH:MM:SS:mmm') — NOT raw ts() for duration. Short word-length gaps (e.g. 20ms) round to 0 frames at 24fps and Remotion throws "durationInFrames must be positive, but got 0".
+- Use ts() for absolute times and for OffthreadVideo startFrom (use the plan's "Source start" for each clip). For every <Sequence> durationInFrames, use dur('HH:MM:SS:mmm') — NOT raw ts() for duration. Short gaps can round to 0 frames and Remotion throws "durationInFrames must be positive, but got 0".
 - Examples:
   <Sequence from={ts('00:00:05:000')} durationInFrames={dur('00:00:03:000')}>
-  <OffthreadVideo startFrom={ts('01:24:00:000')} />
+  <OffthreadVideo src={staticFile('sessionFolder/clip.mp4')} startFrom={ts('00:00:00:270')} />
 
 Structuring:
-1. Tracks: Use stacked <AbsoluteFill> layers as tracks. Later siblings render ON TOP. So overlay tracks (like motion graphics) must be the LAST <AbsoluteFill> in the JSX.
-2. Clips: Place clips on the timeline using <Sequence from={ts('HH:MM:SS:mmm')} durationInFrames={dur('HH:MM:SS:mmm')}> (always dur for duration).
-3. EVERY <OffthreadVideo> MUST have a startFrom prop set to the clip's "Source start" from the editing plan. This tells Remotion where in the source file to begin playback. Without it, every clip plays from the start of the file. Example: <OffthreadVideo src={staticFile('trailer.mp4')} startFrom={ts('01:24:00:000')} muted />
-4. For speaker clips where the audio plays continuously, startFrom must equal the timeline position so video stays in sync with audio.
+1. Tracks: Use stacked <AbsoluteFill> layers as tracks. Later siblings render ON TOP. Overlay tracks (motion graphics, subtitles) must be the LAST <AbsoluteFill> in Main.
+2. Clips: Place clips using <Sequence from={ts('HH:MM:SS:mmm')} durationInFrames={dur('HH:MM:SS:mmm')}> (always dur for duration).
+3. EVERY <OffthreadVideo> MUST have startFrom={ts(plan's Source start for that clip)}. Without it, every clip plays from frame 0 of the file.
+4. For continuous narration across cuts, each clip's startFrom must match the plan's Source start so lip sync stays correct.
 5. Mute videos when only visuals are needed: add muted to <OffthreadVideo>.
-6. NEVER use endAt on <OffthreadVideo>. The Sequence's durationInFrames controls how long a clip plays.
-7. NEVER use useCurrentFrame() for timing visibility of elements.
-8. NEVER nest a <Sequence> inside another <Sequence>. A child Sequence's `from` is RELATIVE to its parent, not absolute. This causes words to be invisible when the parent starts at a non-zero time.
-   WRONG (nested — only first batch works by coincidence):
-     <Sequence from={ts('00:00:02:000')} durationInFrames={...}>
-       <Sequence from={ts('00:00:02:000')}><Word .../></Sequence>  // actual position = frame 48+48 = 96, WRONG
-     </Sequence>
-   CORRECT (flat — every word gets ONE Sequence with absolute from):
-     <Sequence from={ts('00:00:02:000')} durationInFrames={dur('00:00:00:500')}><Word text="because" .../></Sequence>
-     <Sequence from={ts('00:00:02:500')} durationInFrames={dur('00:00:00:400')}><Word text="this" .../></Sequence>
-   For motion graphics, use a FLAT list of Sequences inside a single <AbsoluteFill>. Each word gets its own <Sequence> with absolute `from` and explicit `durationInFrames`. No wrapper Sequences, no batch components.
-9. Every frame of the timeline must have a visible video clip. No gaps between clips.
-10. Use staticFile() with ONLY the filename, never the full absolute path.
+6. NEVER use endAt on <OffthreadVideo>. The Sequence's durationInFrames controls playback length.
+7. The frame contract for overlays is in the NON-NEGOTIABLE block at the top — sequenceFrom + absFrame, or flat Sequences with relative-only math.
 
 Audio (avoid overlaps):
-11. NEVER put clip audio as top-level <Audio> (outside <Sequence>) — it starts at timeline 0 and overlaps.
-12. Video clips: if AudioMuted: Yes -> <OffthreadVideo muted />. If AudioMuted: No -> audio must play ONLY during that clip’s <Sequence>. Do ONE: (A) let <OffthreadVideo> carry audio (no extra <Audio>) OR (B) <OffthreadVideo muted /> + <Audio startFrom=SourceStart /> INSIDE the SAME <Sequence>.
-13. Voiceover / Type: Audio tracks: always <Sequence from=Start duration=Duration><Audio startFrom=SourceStart /></Sequence>.
-14. Never duplicate: don’t play both <OffthreadVideo> audio and <Audio> for the same clip. If plan says mute all video + voiceover exists -> mute ALL videos and play ONLY voiceover.
+8. NEVER put clip audio as top-level <Audio> (outside <Sequence>) — it starts at timeline 0 and overlaps.
+9. Video clips: if AudioMuted: Yes -> <OffthreadVideo muted />. If AudioMuted: No -> audio plays only during that clip's <Sequence>. Do ONE: (A) <OffthreadVideo> carries audio OR (B) <OffthreadVideo muted /> + <Audio startFrom=SourceStart /> inside the SAME <Sequence>.
+10. Voiceover / Type: Audio tracks: <Sequence from=Start duration=Duration><Audio startFrom=SourceStart /></Sequence>.
+11. Never play both <OffthreadVideo> audio and <Audio> for the same clip. If plan says mute all video + voiceover -> mute ALL videos and play ONLY voiceover.
 
-Motion graphics (every clip in the plan whose type is MotionGraphic):
-11. Implement EVERY MotionGraphic clip from the plan - Skipping or replacing with an empty layer is wrong.
-12. Each clip: <Sequence from={ts('START')} durationInFrames={dur('DURATION')}> where START and DURATION are that clip's Start time and Duration from the plan. Use dur() for DURATION so short clips never become 0 frames.
-14. NEVER output an empty <AbsoluteFill />, a transparent-only <AbsoluteFill>, or a Sequence with no visible children "because" the prompt describes particles/glitch/etc. Complex effects are optional; the quoted title text is mandatory.
-15. Place ALL MotionGraphic Sequences inside the LAST <AbsoluteFill> in Main (dedicated overlay track), above all video.
+MotionGraphic checklist:
+12. Each MG clip: <Sequence from={ts('START')} durationInFrames={dur('DURATION')}> from the plan.
+13. NEVER output an empty overlay; the plan's mandatory text (titles, subtitles, quoted words) must appear.
+14. Subtitle/word timing: skip or fix words where ts(start) >= ts(end). All visibility vs plan times uses absFrame if inside a timed Sequence (see top block).
