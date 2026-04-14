@@ -8,47 +8,8 @@ Respond with ONLY a JSON object in this exact format:
   "code": "...full file content..."
 }
 
-================================================================================
-MOTION GRAPHICS & ANY TIMED OVERLAY — NON-NEGOTIABLE (read before writing code)
-================================================================================
-Remotion bug you MUST prevent: inside <Sequence from={ts('T')}>, useCurrentFrame() returns
-frames 0,1,2,… RELATIVE to that Sequence, NOT global composition frames.
-
-A) If ANY logic compares to absolute timeline times from the plan (ts('HH:MM:SS:mmm'),
-word start/end, batch start, "when does X appear"), you MUST use global frame:
-   const absFrame = useCurrentFrame() + sequenceFrom;
-   and pass sequenceFrom={ts('T')} on the component where T is EXACTLY the same string as
-   the parent <Sequence from={ts('T')}>.
-   Apply this to subtitles, kinetic words, Word components, batch components, tooltips — everything.
-
-B) NEVER write: if (useCurrentFrame() >= ts('00:00:01:000')) inside a Sequence that does not
-   start at 00:00:00:000. That only works for the first Sequence; all later ones break.
-
-C) Valid patterns (pick one per overlay):
-   • Batch inside one Sequence: <SubtitleRow sequenceFrom={ts('…same as parent…')} … />
-     with absFrame = useCurrentFrame() + sequenceFrom everywhere you compare to ts().
-   • OR flat Sequences only: each word/card gets its own <Sequence from={ts(…)} durationInFrames={dur(…)}>
-     and the inner component may use useCurrentFrame() as relative ONLY if ALL animations
-     are expressed relative to that clip (no ts() from the full timeline).
-
-D) interpolate(): input range must be STRICTLY increasing ([a,b] with a < b). Never [260,0].
-
-E) staticFile paths: session media lives under public/<sessionFolder>/. Every path MUST include
-   that folder: staticFile('<sessionFolder>/filename.ext'). Derive sessionFolder from the plan's
-   Source file paths (e.g. .../public/a4/foo.mp4 → staticFile('a4/foo.mp4')). Never staticFile('foo.mp4')
-   alone — that resolves to public/foo.mp4 and 404s at render.
-
-F) One primary <OffthreadVideo> per video clip unless the plan requires a transition; do not stack
-   two full-screen copies of the same file with different transforms unless intentional — causes pops
-   and harsh cuts.
-
-G) Implement EVERY MotionGraphic clip from the plan. Empty overlays or missing quoted text are wrong.
-   MG Sequences live in the LAST <AbsoluteFill> in Main (top track).
-
-H) NEVER nest <Sequence> inside <Sequence> using absolute-looking from= on the child — child's from
-   is relative to parent and will mis-schedule content.
-
-================================================================================
+Subtitles / word timing: useCurrentFrame() is relative to the nearest parent <Sequence> only.
+NEVER put a <Sequence> inside another <Sequence> on the same overlay track (e.g. one outer “block” plus inner per-chunk Sequences)—that resets the frame so only the first words sync and the rest flicker or vanish. One flat <Sequence from={ts('S')} durationInFrames={dur(...)}> per chunk/card; inside it use absFrame = useCurrentFrame() + ts('S') with the SAME 'S' as that Sequence’s from. interpolate() ranges must be strictly increasing. staticFile('<sessionFolder>/...') only (media under public/<sessionFolder>/). Hooks only at top level; const frame = useCurrentFrame() once, never inside ternaries/loops.
 
 Rules:
 - "commands" is an array of shell commands to run (e.g. npm install). Use an empty array if none needed.
@@ -91,7 +52,7 @@ Structuring:
 4. For continuous narration across cuts, each clip's startFrom must match the plan's Source start so lip sync stays correct.
 5. Mute videos when only visuals are needed: add muted to <OffthreadVideo>.
 6. NEVER use endAt on <OffthreadVideo>. The Sequence's durationInFrames controls playback length.
-7. The frame contract for overlays is in the NON-NEGOTIABLE block at the top — sequenceFrom + absFrame, or flat Sequences with relative-only math.
+7. Overlay timing: see the subtitle rule at the top (no nested Sequences; absFrame matches that chunk’s Sequence from).
 
 Audio (avoid overlaps):
 8. NEVER put clip audio as top-level <Audio> (outside <Sequence>) — it starts at timeline 0 and overlaps.
@@ -102,4 +63,4 @@ Audio (avoid overlaps):
 MotionGraphic checklist:
 12. Each MG clip: <Sequence from={ts('START')} durationInFrames={dur('DURATION')}> from the plan.
 13. NEVER output an empty overlay; the plan's mandatory text (titles, subtitles, quoted words) must appear.
-14. Subtitle/word timing: skip or fix words where ts(start) >= ts(end). All visibility vs plan times uses absFrame if inside a timed Sequence (see top block).
+14. Subtitle/word timing: skip or fix words where ts(start) >= ts(end); compare visibility to absFrame per the top rule.
